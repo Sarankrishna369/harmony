@@ -141,6 +141,29 @@ def get_ydl_opts(quality):
     else:
         return {'format': 'bestaudio[ext=m4a]/bestaudio/best', 'quiet': True, 'no_warnings': True}
 
+import random
+INVIDIOUS_INSTANCES = [
+    "https://vid.puffyan.us",
+    "https://invidious.jing.rocks",
+    "https://invidious.nerdvpn.de",
+    "https://inv.tux.pizza"
+]
+
+def get_fallback_stream_url(video_id):
+    random.shuffle(INVIDIOUS_INSTANCES)
+    for instance in INVIDIOUS_INSTANCES:
+        try:
+            res = requests.get(f"{instance}/api/v1/videos/{video_id}", timeout=5)
+            if res.ok:
+                data = res.json()
+                audio_streams = [f for f in data.get('adaptiveFormats', []) if 'audio' in f.get('type', '')]
+                if audio_streams:
+                    audio_streams.sort(key=lambda x: int(x.get('bitrate', 0)))
+                    return audio_streams[-1].get('url')
+        except:
+            continue
+    return None
+
 def prefetch_url(video_id, quality="high"):
     cache_key = f"{video_id}_{quality}"
     if cache_key in stream_url_cache:
@@ -166,12 +189,17 @@ def get_stream(video_id: str, request: Request, quality: str = "high"):
         else:
             url = f"https://music.youtube.com/watch?v={video_id}"
             ydl_opts = get_ydl_opts(quality)
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                stream_url = info.get('url')
-                if not stream_url:
-                    raise Exception("Could not extract stream URL")
-                stream_url_cache[video_id] = stream_url
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    stream_url = info.get('url')
+            except Exception as e:
+                print("yt-dlp blocked, using fallback:", e)
+                stream_url = get_fallback_stream_url(video_id)
+                
+            if not stream_url:
+                raise Exception("Could not extract stream URL")
+            stream_url_cache[video_id] = stream_url
             
         # Proxy range header
         req_headers = {}
