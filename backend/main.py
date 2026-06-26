@@ -133,12 +133,17 @@ import threading
 
 stream_url_cache = {}
 
+import os
+
 def get_ydl_opts(quality):
+    cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")
     base_opts = {
         'quiet': True,
         'no_warnings': True,
         'extractor_args': {'youtube': ['client=IOS,WEB']}
     }
+    if os.path.exists(cookie_path):
+        base_opts['cookiefile'] = cookie_path
     if quality == 'low':
         base_opts['format'] = 'bestaudio[abr<=128]/bestaudio'
     elif quality == 'medium':
