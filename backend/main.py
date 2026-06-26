@@ -137,7 +137,7 @@ def get_ydl_opts(quality):
     base_opts = {
         'quiet': True,
         'no_warnings': True,
-        'extractor_args': {'youtube': ['player_client=android,web']}
+        'extractor_args': {'youtube': ['client=IOS,WEB']}
     }
     if quality == 'low':
         base_opts['format'] = 'bestaudio[abr<=128]/bestaudio'
